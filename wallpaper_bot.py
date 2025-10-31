@@ -1,8 +1,10 @@
 # =============================================================================
-#    *** بوت YourWallAR - الإصدار 1.1 (جدول آمن) ***
+#    *** بوت YourWallAR - الإصدار 1.2 (التصحيح الذكي) ***
 #
-#  (v1.1) تم تغيير مصطلحات البحث الغامضة (مثل 'dark aesthetic')
-#         إلى مصطلحات أوسع ('night sky') لضمان إيجاد نتائج.
+#  (v1.2) تم تغيير جودة الصورة من 'raw' (خام) إلى 'regular' (عالية)
+#         لمنع فشل التحميل (Timeout).
+#  (v1.2) أصبح البوت يرسل رسالة الخطأ "الحقيقية" من الـ API
+#         إلى القناة مباشرة لتشخيص المشكلة.
 # =============================================================================
 
 import requests
@@ -33,14 +35,15 @@ def post_photo_to_telegram(image_url, text_caption):
     response = None 
     try:
         print(f"   ... (1/2) جاري تحميل الصورة من: {image_url}")
-        # (استخدام جودة .png عالية)
-        image_response = requests.get(image_url + "&fm=png&w=1080&q=80", timeout=60)
+        # (v1.2) تم تغيير جودة الصورة من 'raw' إلى 'regular' (jpg)
+        image_response = requests.get(image_url, timeout=60) # (لم نعد بحاجة لإضافة بارامترات للجودة)
         image_response.raise_for_status()
         image_data = image_response.content
         
         url = f"{TELEGRAM_API_URL}/sendPhoto"
         payload = { 'chat_id': CHANNEL_USERNAME, 'caption': text_caption, 'parse_mode': 'HTML'}
-        files = {'photo': ('wallpaper.png', image_data, 'image/png')}
+        # (v1.2) تغيير نوع الملف إلى 'image/jpeg'
+        files = {'photo': ('wallpaper.jpg', image_data, 'image/jpeg')} 
         
         print("   ... (2/2) جاري رفع الصورة إلى تيليجرام ...")
         response = requests.post(url, data=payload, files=files, timeout=90)
@@ -50,10 +53,10 @@ def post_photo_to_telegram(image_url, text_caption):
     except requests.exceptions.RequestException as e:
         error_message = getattr(response, 'text', 'لا يوجد رد من تيليجرام')
         print(f"!!! فشل إرسال (الخلفية): {e} - {error_message}")
-        sys.exit(1) # نوقف التشغيل إذا فشلت الصورة
+        sys.exit(1)
 
 def post_text_to_telegram(text_content):
-    """(آمن) إرسال رسالة خطأ نصية فقط إذا فشل الـ API"""
+    """(آمن) إرسال رسالة خطأ نصية"""
     print(f"... جاري إرسال (رسالة خطأ) إلى {CHANNEL_USERNAME} ...")
     url = f"{TELEGRAM_API_URL}/sendMessage"
     payload = { 'chat_id': CHANNEL_USERNAME, 'text': text_content, 'parse_mode': 'HTML' }
@@ -69,22 +72,24 @@ def post_text_to_telegram(text_content):
 def get_random_wallpaper(search_query):
     """
     يجلب صورة عشوائية عالية الجودة من Unsplash بناءً على البحث.
+    (v1.2) تم تعديل هذه الدالة لترجع الخطأ الفعلي.
     """
     print(f"... جاري جلب خلفية لـ: '{search_query}'")
     headers = {'Authorization': f'Client-ID {UNSPLASH_ACCESS_KEY}'}
     params = {
         'query': search_query,
-        'orientation': 'portrait', # (صور عمودية للهاتف)
-        'content_filter': 'high',  # (فلتر أمان)
+        'orientation': 'portrait',
+        'content_filter': 'high',
     }
     
-    response_api = None # (متغير لتخزين الرد)
+    response_api = None
     try:
         response_api = requests.get(UNSPLASH_API_URL, headers=headers, params=params, timeout=30)
-        response_api.raise_for_status() # (هنا سيفشل إذا كان 401 أو 404)
+        response_api.raise_for_status() # سيفشل هنا إذا كان 401, 403, 404
         data = response_api.json()
         
-        image_url = data['urls']['raw'] # (أعلى جودة)
+        # (v1.2) استخدام 'regular' بدلاً من 'raw'
+        image_url = data['urls']['regular'] 
         description = data.get('alt_description') or data.get('description') or "خلفية مميزة"
         photographer_name = data['user']['name']
         photographer_url = data['user']['links']['html']
@@ -97,31 +102,31 @@ def get_random_wallpaper(search_query):
         caption += f"❤️ <b>الإعجابات:</b> {likes}\n\n"
         caption += f"---\n<i>*تابعنا للمزيد من @{CHANNEL_USERNAME.lstrip('@')}*</i>"
         
-        return image_url, caption
+        return image_url, caption, None # (لا يوجد خطأ)
+        
+    except requests.exceptions.HTTPError as e:
+        # (هذا هو الخطأ الأهم: 401, 403, 404)
+        error_details = f"HTTP Error: {e.response.status_code} (Unauthorized / Not Found)"
+        print(f"!!! فشل جلب البيانات من Unsplash: {error_details} - {e.response.text}")
+        return None, None, error_details # (إرجاع رسالة الخطأ)
         
     except Exception as e:
-        # (طباعة الخطأ الحقيقي في سجل GitHub)
-        error_details = getattr(response_api, 'text', 'لا يوجد رد')
-        print(f"!!! فشل جلب البيانات من Unsplash: {e} - {error_details}")
-        return None, None
+        # (أخطاء أخرى مثل انقطاع الاتصال أو JSON)
+        error_details = f"General Error: {str(e)}"
+        print(f"!!! فشل جلب البيانات من Unsplash: {error_details}")
+        return None, None, error_details # (إرجاع رسالة الخطأ)
 
 # --- [4] التشغيل الرئيسي (الذكي) ---
 def main():
     print("==========================================")
-    print(f"بدء تشغيل (v1.1 - بوت YourWallAR - جدول آمن)...")
+    print(f"بدء تشغيل (v1.2 - بوت YourWallAR - تصحيح ذكي)...")
     
-    # (v1.1 - جدول زمني بكلمات بحث "آمنة" ومضمونة)
+    # (جدول زمني آمن v1.1)
     SCHEDULE = {
-        6: 'morning',
-        8: 'sunrise',       # (أكثر تحديداً من morning light)
-        10: 'nature',
-        12: 'city',          # (أكثر أماناً من architecture)
-        14: 'light',         # (أكثر أماناً من noon)
-        16: 'nature',
-        18: 'sunset',
-        20: 'night',
-        22: 'space',         # (أكثر أماناً من stars)
-        0: 'night sky'      # (أكثر أماناً من dark aesthetic)
+        6: 'morning', 8: 'sunrise', 10: 'nature',
+        12: 'city', 14: 'light', 16: 'nature',
+        18: 'sunset', 20: 'night', 22: 'space',
+        0: 'night sky' 
     }
     
     try:
@@ -139,14 +144,17 @@ def main():
         search_query = SCHEDULE[current_hour_iraq]
         print(f">>> (وقت مجدول: {current_hour_iraq}:00) - جاري تشغيل مهمة: '{search_query}'")
         
-        image_url, caption = get_random_wallpaper(search_query)
+        # (v1.2) تم تعديل هذه الدالة لترجع 3 قيم
+        image_url, caption, error_msg = get_random_wallpaper(search_query)
         
         if image_url and caption:
+            # (نجاح)
             post_photo_to_telegram(image_url, caption)
         else:
-            print("!!! فشل جلب الصورة أو تنسيقها، تخطي النشر.")
-            # (إرسال رسالة الخطأ المحددة)
-            post_text_to_telegram(f"🚨 حدث خطأ أثناء جلب خلفية ({search_query}). يرجى المراجعة.")
+            # (فشل)
+            print(f"!!! فشل جلب الصورة. السبب: {error_msg}")
+            # (إرسال رسالة الخطأ المحددة إلى تيليجرام)
+            post_text_to_telegram(f"🚨 حدث خطأ أثناء جلب خلفية ({search_query}).\n\n<b>السبب الفني:</b>\n<pre>{error_msg}</pre>")
             
     else:
         print(f"... (الوقت: {current_hour_iraq}:00) - لا توجد مهمة مجدولة لهذا الوقت. تخطي.")
