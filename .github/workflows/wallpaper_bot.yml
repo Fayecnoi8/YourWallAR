@@ -1,8 +1,8 @@
-name: YourWallAR Bot (v4.2 - Time Fix)
+name: YourWallAR Bot (v5.0 - Image Compression)
 
 on:
   schedule:
-    # (v4.2) الجدول الآن بتوقيت UTC ليطابق كود البايثون
+    # (الجدول بتوقيت UTC ليطابق كود البايثون)
     # (6:00 UTC = 9:00 صباحاً بتوقيت العراق)
     # (12:00 UTC = 3:00 مساءً بتوقيت العراق)
     # (18:00 UTC = 9:00 مساءً بتوقيت العراق)
@@ -29,9 +29,9 @@ jobs:
           python-version: '3.11'
           
       - name: Install Dependencies
-        # (v4.2) تم إزالة 'pytz' لأننا لم نعد بحاجة إليه
-        run: pip install requests
+        # (v5.0) تم إضافة 'Pillow' (مهم جداً)
+        run: pip install requests Pillow
         
-      - name: Run Python Script (v4.2 - Time Fix)
+      - name: Run Python Script (v5.0 - Compression)
         run: python wallpaper_bot.py
 
