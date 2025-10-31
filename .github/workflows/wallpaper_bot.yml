@@ -1,9 +1,8 @@
-name: YourWallAR Bot (v1.0)
+name: YourWallAR Bot (v2.0 - Pexels)
 
 on:
   schedule:
     # (جدول ذكي: "استيقظ" كل ساعة على رأس الساعة)
-    # سيعمل 24 مرة في اليوم، لكن كود البايثون سينشر 10 مرات فقط.
     - cron: '0 * * * *'
 
   # هذا يسمح لنا بالاختبار اليدوي
@@ -16,7 +15,7 @@ jobs:
       # (المفاتيح السرية الثلاثة المطلوبة)
       BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
       CHANNEL_USERNAME: ${{ secrets.CHANNEL_USERNAME }}
-      UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }} # (تم تغيير المفتاح)
       
     steps:
       - name: Checkout Repository
@@ -28,7 +27,8 @@ jobs:
           python-version: '3.11'
           
       - name: Install Dependencies
-        run: pip install requests pytz # (أضفنا pytz للمناطق الزمنية)
+        run: pip install requests pytz # (pytz للمناطق الزمنية)
         
-      - name: Run Python Script (Smart Schedule v1.0)
+      - name: Run Python Script (Pexels v2.0)
         run: python wallpaper_bot.py
+
