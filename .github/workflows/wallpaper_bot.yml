@@ -1,9 +1,12 @@
-name: YourWallAR Bot (v2.0 - Pexels)
+name: YourWallAR Bot (v4.2 - Time Fix)
 
 on:
   schedule:
-    # (جدول ذكي: "استيقظ" كل ساعة على رأس الساعة)
-    - cron: '0 * * * *'
+    # (v4.2) الجدول الآن بتوقيت UTC ليطابق كود البايثون
+    # (6:00 UTC = 9:00 صباحاً بتوقيت العراق)
+    # (12:00 UTC = 3:00 مساءً بتوقيت العراق)
+    # (18:00 UTC = 9:00 مساءً بتوقيت العراق)
+    - cron: '0 6,12,18 * * *'
 
   # هذا يسمح لنا بالاختبار اليدوي
   workflow_dispatch:
@@ -12,10 +15,9 @@ jobs:
   run-wallpaper-bot:
     runs-on: ubuntu-latest
     env:
-      # (المفاتيح السرية الثلاثة المطلوبة)
       BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
       CHANNEL_USERNAME: ${{ secrets.CHANNEL_USERNAME }}
-      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }} # (تم تغيير المفتاح)
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       
     steps:
       - name: Checkout Repository
@@ -27,8 +29,9 @@ jobs:
           python-version: '3.11'
           
       - name: Install Dependencies
-        run: pip install requests pytz # (pytz للمناطق الزمنية)
+        # (v4.2) تم إزالة 'pytz' لأننا لم نعد بحاجة إليه
+        run: pip install requests
         
-      - name: Run Python Script (Pexels v2.0)
+      - name: Run Python Script (v4.2 - Time Fix)
         run: python wallpaper_bot.py
 
