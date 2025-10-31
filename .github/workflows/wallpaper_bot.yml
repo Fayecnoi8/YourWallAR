@@ -1,0 +1,34 @@
+name: YourWallAR Bot (v1.0)
+
+on:
+  schedule:
+    # (جدول ذكي: "استيقظ" كل ساعة على رأس الساعة)
+    # سيعمل 24 مرة في اليوم، لكن كود البايثون سينشر 10 مرات فقط.
+    - cron: '0 * * * *'
+
+  # هذا يسمح لنا بالاختبار اليدوي
+  workflow_dispatch:
+
+jobs:
+  run-wallpaper-bot:
+    runs-on: ubuntu-latest
+    env:
+      # (المفاتيح السرية الثلاثة المطلوبة)
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+      CHANNEL_USERNAME: ${{ secrets.CHANNEL_USERNAME }}
+      UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
+      
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install Dependencies
+        run: pip install requests pytz # (أضفنا pytz للمناطق الزمنية)
+        
+      - name: Run Python Script (Smart Schedule v1.0)
+        run: python wallpaper_bot.py
