@@ -1,11 +1,11 @@
 # =============================================================================
-#    *** بوت YourWallAR - الإصدار 5.1 (تحميل سريع + ضغط) ***
+#    *** بوت YourWallAR - الإصدار 6.0 (الإرسال بالرابط - إصلاح التايم آوت) ***
 #
-#  (v5.1) المشكلة: تحميل 'large' (5-10MB) يسبب Timeout صامت.
-#  (v5.1) الحل: نطلب 'portrait' (أقل من 1MB) من Pexels.
-#         - 1. تحميل الصورة (portrait) - (سريع جداً).
-#         - 2. ضغطها بـ 'Pillow' (لزيادة الأمان وتقليل الحجم أكثر).
-#         - 3. رفع الصورة المضغوطة (سريع جداً).
+#  (v6.0) المشكلة: تحميل/ضغط/رفع يسبب (Timeout) صامت.
+#  (v6.0) الحل: لا نقوم بتحميل أو ضغط أي شيء.
+#         - 1. نرسل رابط الصورة (URL) مباشرة إلى تيليجرام.
+#         - 2. خوادم تيليجرام القوية تتولى عملية التحميل.
+#         - هذا يحل مشكلة التايم آوت 100%.
 # =============================================================================
 
 import requests
@@ -13,8 +13,7 @@ import os
 import sys
 import datetime
 import random
-import io 
-from PIL import Image 
+# (v6.0) تم حذف 'Pillow' و 'io' لأننا لن نقوم بالضغط
 
 # --- [1] الإعدادات والمفاتيح السرية (3 مفاتيح مطلوبة) ---
 try:
@@ -30,49 +29,35 @@ TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 PEXELS_API_URL = "https://api.pexels.com/v1/search"
 TRANSLATE_API_URL = "https://api.mymemory.translated.net/get"
 
-# --- [2] الدوال المساعدة (إرسال الرسائل - v5.1) ---
+# --- [2] الدوال المساعدة (إرسال الرسائل - v6.0) ---
 
-def compress_and_upload_image(image_url, text_caption):
-    """(v5.1 - الطريقة الأقوى) تحميل (سريع)، ضغط، ثم رفع الصورة."""
-    print(f"... (v5.1) جاري تحميل وضغط ورفع: {image_url}")
-    response_telegram = None 
+def post_photo_by_url(image_url, text_caption):
+    """(v6.0 - الطريقة الأسرع) إرسال رابط الصورة مباشرة إلى تيليجرام."""
+    print(f"... (v6.0) جاري إرسال (الرابط) إلى تيليجرام: {image_url}")
+    url = f"{TELEGRAM_API_URL}/sendPhoto"
+    caption_to_send = text_caption if text_caption.strip() else None
     
+    # (v6.0) نرسل 'image_url' مباشرة في حقل 'photo'
+    payload = {
+        'chat_id': CHANNEL_USERNAME,
+        'photo': image_url, # <-- هذا هو التغيير الأهم
+        'caption': caption_to_send,
+        'parse_mode': 'HTML'
+    }
+    
+    response_telegram = None
     try:
-        # 1. التحميل
-        print("   ... (1/3) جاري تحميل الصورة (portrait)...")
-        image_response = requests.get(image_url, timeout=90)
-        image_response.raise_for_status()
-        image_data = image_response.content
-        print(f"   >>> تم تحميل الصورة (الحجم: {len(image_data) / 1024 / 1024:.2f} MB)") # (نتوقع أن يكون أقل من 1MB)
-
-        # 2. الضغط (باستخدام Pillow)
-        print("   ... (2/3) جاري ضغط الصورة (quality=85)...")
-        img = Image.open(io.BytesIO(image_data))
-        if img.mode in ("RGBA", "P"): img = img.convert("RGB")
-            
-        img_buffer = io.BytesIO()
-        img.save(img_buffer, format='JPEG', quality=85, optimize=True)
-        img_buffer.seek(0)
-        compressed_image_data = img_buffer.getvalue()
-        print(f"   >>> تم ضغط الصورة (الحجم الجديد: {len(compressed_image_data) / 1024 / 1024:.2f} MB)")
-
-        # 3. الرفع (رفع النسخة المضغوطة)
-        print("   ... (3/3) جاري رفع الصورة المضغوطة إلى تيليجرام...")
-        url = f"{TELEGRAM_API_URL}/sendPhoto"
-        caption_to_send = text_caption if text_caption.strip() else None
-        payload = { 'chat_id': CHANNEL_USERNAME, 'caption': caption_to_send, 'parse_mode': 'HTML'}
-        files = {'photo': ('wallpaper.jpg', compressed_image_data, 'image/jpeg')} 
-        
-        response_telegram = requests.post(url, data=payload, files=files, timeout=90)
+        response_telegram = requests.post(url, json=payload, timeout=60)
         response_telegram.raise_for_status()
-        print(">>> (v5.1) تم إرسال (الخلفية المضغوطة) بنجاح!")
-
+        print(">>> (v6.0) تم إرسال (رابط الخلفية) بنجاح!")
+        
+    except requests.exceptions.HTTPError as e:
+        error_message = f"HTTP Error: {e.response.status_code} - {e.response.text}"
+        print(f"!!! (v6.0) فشل إرسال (رابط الخلفية): {error_message}")
+        post_text_to_telegram(f"🚨 حدث خطأ أثناء إرسال الخلفية.\n\n<b>السبب:</b>\n<pre>{error_message}</pre>")
     except Exception as e:
         error_message = f"Error: {str(e)}"
-        if hasattr(e, 'response') and e.response is not None:
-             error_message = f"HTTP Error: {e.response.status_code} - {e.response.text}"
-        
-        print(f"!!! (v5.1) فشل إرسال (الخلفية المضغوطة): {error_message}")
+        print(f"!!! (v6.0) فشل إرسال (رابط الخلفية): {error_message}")
         post_text_to_telegram(f"🚨 حدث خطأ فادح أثناء معالجة الخلفية.\n\n<b>السبب:</b>\n<pre>{error_message}</pre>")
 
 
@@ -107,7 +92,7 @@ def translate_text(text_to_translate):
         print(f"!!! فشلت الترجمة: {e}. العودة إلى الإنجليزية.")
         return text_to_translate
 
-# --- [4] دالة جلب البيانات (v5.1 - جلب الرابط الآمن) ---
+# --- [4] دالة جلب البيانات (v6.0 - جلب الرابط المناسب) ---
 
 def get_random_wallpaper(search_query, orientation):
     print(f"... جاري جلب خلفية لـ: '{search_query}' (الاتجاه: {orientation})")
@@ -127,9 +112,9 @@ def get_random_wallpaper(search_query, orientation):
 
         photo = data['photos'][0]
         
-        # (v5.1) التغيير الأهم: نطلب 'portrait'
-        # هذا الرابط صغير الحجم وسريع التحميل
-        image_url_source = photo['src']['portrait'] 
+        # (v6.0) التغيير الأهم: نختار الجودة التي سنرسلها كرابط
+        # 'large' هو أفضل توازن (ليس ضخماً وليس صغيراً)
+        image_url_source = photo['src']['large'] 
         
         description_en = photo.get('alt')
         photographer_name = photo['photographer']
@@ -159,10 +144,10 @@ def format_telegram_post(title, description, photographer_name, photographer_url
     final_caption = "\n\n".join(caption_parts)
     return final_caption
 
-# --- [6] التشغيل الرئيسي (لم يتغير عن v5.0) ---
+# --- [6] التشغيل الرئيسي (لم يتغير عن v5.1) ---
 def main():
     print("==========================================")
-    print(f"بدء تشغيل (v5.1 - بوت YourWallAR - تحميل سريع)...")
+    print(f"بدء تشغيل (v6.0 - بوت YourWallAR - الإرسال بالرابط)...")
     
     # (الجدول بتوقيت UTC ليطابق ملف YML)
     SCHEDULE = {
@@ -187,7 +172,8 @@ def main():
         
         if image_url: # (إذا نجح جلب البيانات)
             caption = format_telegram_post(task['title'], description, photo_name, photo_url)
-            compress_and_upload_image(image_url, caption)
+            # (v6.0) استخدام الدالة الجديدة التي ترسل الرابط
+            post_photo_by_url(image_url, caption)
         else:
             # (فشل جلب البيانات من Pexels)
             print(f"!!! فشل جلب الصورة. السبب: {error_msg}")
