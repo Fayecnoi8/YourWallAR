@@ -1,4 +1,4 @@
-name: YourWallAR Bot (v6.0 - URL Sending)
+name: YourWallAR Bot (v7.0 - Translated + Fast)
 
 on:
   schedule:
@@ -29,9 +29,9 @@ jobs:
           python-version: '3.11'
           
       - name: Install Dependencies
-        # (v6.0) تم حذف 'Pillow'. نحتاج 'requests' فقط
+        # (v7.0) نحتاج 'requests' فقط
         run: pip install requests
         
-      - name: Run Python Script (v6.0 - URL Sending)
+      - name: Run Python Script (v7.0 - Translated + Fast)
         run: python wallpaper_bot.py
 
