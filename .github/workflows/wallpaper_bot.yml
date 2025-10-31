@@ -1,4 +1,4 @@
-name: YourWallAR Bot (v5.0 - Image Compression)
+name: YourWallAR Bot (v6.0 - URL Sending)
 
 on:
   schedule:
@@ -29,9 +29,9 @@ jobs:
           python-version: '3.11'
           
       - name: Install Dependencies
-        # (v5.0) تم إضافة 'Pillow' (مهم جداً)
-        run: pip install requests Pillow
+        # (v6.0) تم حذف 'Pillow'. نحتاج 'requests' فقط
+        run: pip install requests
         
-      - name: Run Python Script (v5.0 - Compression)
+      - name: Run Python Script (v6.0 - URL Sending)
         run: python wallpaper_bot.py
 
