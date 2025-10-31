@@ -1,11 +1,8 @@
-name: YourWallAR Bot (v7.0 - Translated + Fast)
+name: YourWallAR Bot (v9.0 - Manual Test Fix)
 
 on:
   schedule:
     # (الجدول بتوقيت UTC ليطابق كود البايثون)
-    # (6:00 UTC = 9:00 صباحاً بتوقيت العراق)
-    # (12:00 UTC = 3:00 مساءً بتوقيت العراق)
-    # (18:00 UTC = 9:00 مساءً بتوقيت العراق)
     - cron: '0 6,12,18 * * *'
 
   # هذا يسمح لنا بالاختبار اليدوي
@@ -18,6 +15,8 @@ jobs:
       BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
       CHANNEL_USERNAME: ${{ secrets.CHANNEL_USERNAME }}
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      # (v9.0) التغيير الأهم: تمرير "نوع التشغيل" إلى البايثون
+      GITHUB_EVENT_NAME: ${{ github.event_name }}
       
     steps:
       - name: Checkout Repository
@@ -29,9 +28,8 @@ jobs:
           python-version: '3.11'
           
       - name: Install Dependencies
-        # (v7.0) نحتاج 'requests' فقط
         run: pip install requests
         
-      - name: Run Python Script (v7.0 - Translated + Fast)
+      - name: Run Python Script (v9.0 - Manual Test Fix)
         run: python wallpaper_bot.py
 
